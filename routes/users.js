@@ -55,7 +55,6 @@ router.post("/", validateBody, (req, res, next) => {
 });
 
 router.put("/:id", validateBody, (req, res, next) => {
-  console.log("Request delete for user with id: ", req.params.id);
   getSingleUser(req.params.id).then((result) => {
     if (result.rows.length === 0) {
       return res
@@ -65,16 +64,36 @@ router.put("/:id", validateBody, (req, res, next) => {
         );
     }
     const { firstname, lastname } = req.body;
-    db.query("UPDATE users SET firstname=$1, lastname=$2 RETURNING *", [
-      firstname,
-      lastname,
-    ])
+    db.query(
+      "UPDATE users SET firstname=$1, lastname=$2 where id=$3 RETURNING *",
+      [firstname, lastname, req.params.id]
+    )
       .then((result) => {
         res.send(result.rows[0]);
       })
       .catch((error) => {
         console.error(error);
         res.status(500).send("Failed to update the user.");
+      });
+  });
+});
+
+router.delete("/:id", (req, res, next) => {
+  getSingleUser(req.params.id).then((result) => {
+    if (result.rows.length === 0) {
+      return res
+        .status(400)
+        .send(
+          `The user with the id ${req.params.id} does not exist in the db.`
+        );
+    }
+    db.query("DELETE FROM users where id=$1 RETURNING *", [req.params.id])
+      .then((result) => {
+        res.send(result.rows[0]);
+      })
+      .catch((error) => {
+        console.error(error);
+        res.status(500).send("Failed to delete the user.");
       });
   });
 });
