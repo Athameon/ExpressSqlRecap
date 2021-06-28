@@ -3,6 +3,7 @@ const express = require("express");
 const path = require("path");
 const cookieParser = require("cookie-parser");
 const logger = require("morgan");
+const db = require("./db/client");
 
 const indexRouter = require("./routes/index");
 const usersRouter = require("./routes/users");
@@ -18,10 +19,8 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use("/", indexRouter);
 app.use("/users", usersRouter);
 
-const { Pool } = require("pg");
-const pool = new Pool();
 app.get("/now", (req, res) => {
-  pool.query("SELECT NOW();").then((result) => {
+  db.query("SELECT NOW();").then((result) => {
     console.log(result.rows[0]);
     res.send(result.rows[0].now);
   });
