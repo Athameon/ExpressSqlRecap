@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const path = require("path");
 const cookieParser = require("cookie-parser");
@@ -16,5 +17,14 @@ app.use(express.static(path.join(__dirname, "public")));
 
 app.use("/", indexRouter);
 app.use("/users", usersRouter);
+
+const { Pool } = require("pg");
+const pool = new Pool();
+app.get("/now", (req, res) => {
+  pool.query("SELECT NOW();").then((result) => {
+    console.log(result.rows[0]);
+    res.send(result.rows[0].now);
+  });
+});
 
 module.exports = app;
