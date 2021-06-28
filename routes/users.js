@@ -7,21 +7,25 @@ const getSingleUser = async (id) => {
   return await db.query("SELECT * from users where id=$1;", [id]);
 };
 
-/* GET users listing. */
-router.get("/", (req, res, next) => {
-  db.query("SELECT * from users;").then(({ rows }) => {
-    res.send(rows);
-  });
-});
-router.get("/:id", (req, res, next) => {
+const checkUser = (req, res, next) => {
   getSingleUser(req.params.id).then(({ rows }) => {
     if (rows.length === 0) {
       return res
         .status(404)
         .send("Could not find the user with the id: " + req.params.id);
     }
-    res.send(rows[0]);
+    res.user = rows[0];
+    next();
   });
+};
+
+router.get("/", (req, res, next) => {
+  db.query("SELECT * from users;").then(({ rows }) => {
+    res.send(rows);
+  });
+});
+router.get("/:id", checkUser, (req, res, next) => {
+  res.send(res.user);
 });
 
 const validateBody = [
@@ -54,48 +58,30 @@ router.post("/", validateBody, (req, res, next) => {
     });
 });
 
-router.put("/:id", validateBody, (req, res, next) => {
-  getSingleUser(req.params.id).then((result) => {
-    if (result.rows.length === 0) {
-      return res
-        .status(400)
-        .send(
-          `The user with the id ${req.params.id} does not exist in the db.`
-        );
-    }
-    const { firstname, lastname } = req.body;
-    db.query(
-      "UPDATE users SET firstname=$1, lastname=$2 where id=$3 RETURNING *",
-      [firstname, lastname, req.params.id]
-    )
-      .then((result) => {
-        res.send(result.rows[0]);
-      })
-      .catch((error) => {
-        console.error(error);
-        res.status(500).send("Failed to update the user.");
-      });
-  });
+router.put("/:id", validateBody, checkUser, (req, res, next) => {
+  const { firstname, lastname } = req.body;
+  db.query(
+    "UPDATE users SET firstname=$1, lastname=$2 where id=$3 RETURNING *",
+    [firstname, lastname, req.params.id]
+  )
+    .then((result) => {
+      res.send(result.rows[0]);
+    })
+    .catch((error) => {
+      console.error(error);
+      res.status(500).send("Failed to update the user.");
+    });
 });
 
-router.delete("/:id", (req, res, next) => {
-  getSingleUser(req.params.id).then((result) => {
-    if (result.rows.length === 0) {
-      return res
-        .status(400)
-        .send(
-          `The user with the id ${req.params.id} does not exist in the db.`
-        );
-    }
-    db.query("DELETE FROM users where id=$1 RETURNING *", [req.params.id])
-      .then((result) => {
-        res.send(result.rows[0]);
-      })
-      .catch((error) => {
-        console.error(error);
-        res.status(500).send("Failed to delete the user.");
-      });
-  });
+router.delete("/:id", checkUser, (req, res, next) => {
+  db.query("DELETE FROM users where id=$1 RETURNING *", [req.params.id])
+    .then((result) => {
+      res.send(result.rows[0]);
+    })
+    .catch((error) => {
+      console.error(error);
+      res.status(500).send("Failed to delete the user.");
+    });
 });
 
 module.exports = router;
