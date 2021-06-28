@@ -1,4 +1,5 @@
 const express = require("express");
+const { body, validationResult } = require("express-validator");
 const router = express.Router();
 const db = require("../db/client");
 
@@ -21,12 +22,22 @@ router.get("/:id", (req, res, next) => {
   );
 });
 
-router.post("/", (req, res, next) => {
+const validateBody = [
+  body("firstname")
+    .isLength({ min: 3 })
+    .withMessage("You must provide a 'firstname' with at least 3 caracters."),
+  body("lastname")
+    .isLength({ min: 3 })
+    .withMessage("You must provide a 'lastname' with at least 3 caracters."),
+];
+
+router.post("/", validateBody, (req, res, next) => {
   console.log(req.body);
-  const { firstname, lastname } = req.body;
-  if (!firstname || !lastname) {
-    return res.status(400).send("A 'firstname' and a 'lastname' is required");
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
   }
+  const { firstname, lastname } = req.body;
   db.query(
     "INSERT INTO users (firstname, lastname) VALUES ($1, $2) RETURNING *",
     [firstname, lastname]
